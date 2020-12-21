@@ -3,6 +3,7 @@ import subprocess
 import questionary
 import usb.core
 import usb.util
+from photo_buddy.data.data_loader import UsbId
 
 
 class QuestionaryOption(click.Option):
@@ -21,6 +22,7 @@ class QuestionaryOption(click.Option):
 def run():
     pass
 
+
 @run.command()
 @click.option('--src', '-s', type=click.Choice(['sony-xa2', 'icloud']), cls=QuestionaryOption)
 @click.option('--des', '-d', type=click.Choice(['syno']), cls=QuestionaryOption)
@@ -34,20 +36,26 @@ def backup(src, des, uid):
         out, err = pfind.communicate()
         click.echo(out)
 
-
-        # f'/var/run/user/{uid}/gvfs/mtp:host=%5Busb%3A001%2C014%5D/Mass\ storage/Pictures/Camera'
-
 @run.command()
-def scan():
-    imaging = usb.core.find(find_all=True)
-    # imaging = usb.core.find(find_all=True, bDeviceClass=0)
+@click.option('--usb-devices', '-u', help="scan usb devices", is_flag=True)
+def scan(usb_devices):
+    """ scanning connected devices
+
+    Returns:
+
+    """
+
+    usbid = UsbId()
+    # imaging = usb.core.find(find_all=True)
+    imaging = usb.core.find(find_all=True, bDeviceClass=0)
     # Python 2, Python 3, to be or not to be
     for d in imaging:
-        click.echo(d.idVendor)
-        click.echo(d.iManufacturer)
-        click.echo(d.idProduct)
-        click.echo(d.iSerialNumber)
-    pass
+        hex_idvendor = hex(d.idVendor)[2:]
+        hex_idproduct = hex(d.iProduct)[2:]
+        ret = usbid.get_usbid_names("{0:0{1}x}".format(d.idVendor, 4), "{0:0{1}x}".format(d.idProduct, 4))
+        if ret:
+            click.echo(ret)
+
 
 if __name__ ==  '__main__':
     pass

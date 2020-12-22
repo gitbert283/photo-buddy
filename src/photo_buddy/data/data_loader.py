@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 class UsbId:
 
+    print(Path().absolute())
     file = Path(__file__).parent.joinpath('usb.ids')
 
     @staticmethod

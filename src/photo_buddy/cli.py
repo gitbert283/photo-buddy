@@ -6,6 +6,26 @@ import usb.util
 from photo_buddy.data.data_loader import UsbId
 
 
+def usb_devices(type='imaging'):
+    usbid = UsbId()
+    if type == 'imaging':
+        devices_raw = usb.core.find(find_all=True, custom_match=find_class(6))
+    else:
+        devices_raw = usb.core.find(find_all=True)
+    devices = []
+    for d in devices_raw:
+        ret = usbid.get_usbid_names("{0:0{1}x}".format(d.idVendor, 4), "{0:0{1}x}".format(d.idProduct, 4))
+        if ret:
+            sn = usb.util.get_string(d, d.iSerialNumber)
+
+            devices.append(' '.join(
+                [v for v in ret if v is not None] +
+                [sn if sn else '']
+            ))
+
+    return devices
+
+
 class QuestionaryOption(click.Option):
 
     def __init__(self, param_decls=None, **attrs):
@@ -14,7 +34,7 @@ class QuestionaryOption(click.Option):
             raise Exception('ChoiceOption type arg must be click.Choice')
 
     def prompt_for_value(self, ctx):
-        val = questionary.select(self.prompt, choices=self.type.choices).unsafe_ask()
+        val = questionary.select(self.prompt, choices=usb_devices()).unsafe_ask()
         return val
 
 class find_class(object):
@@ -43,7 +63,7 @@ def run():
 
 
 @run.command()
-@click.option('--src', '-s', type=click.Choice(['sony-xa2', 'icloud']), cls=QuestionaryOption)
+@click.option('--src', '-s', prompt='Device', type=click.Choice(['sony-xa2', 'icloud']), cls=QuestionaryOption)
 @click.option('--des', '-d', type=click.Choice(['syno']), cls=QuestionaryOption)
 @click.option('--uid', default='1000')
 def backup(src, des, uid):
@@ -56,13 +76,12 @@ def backup(src, des, uid):
         click.echo(out)
 
 @run.command()
-@click.option('--usb-devices', '-u', help="scan usb devices", is_flag=True, default=True)
+@click.option('--usb-devices', '-u', help="scan usb devices", is_flag=True)
 @click.option('--imaging', '-i', help="filter usb imaging devices", is_flag=True, default=True)
+# @click.argument('--device', '-d', prompt='Device', type=click.Choice([]), cls=QuestionaryOption)
+
 def scan(usb_devices, imaging):
     """ scanning connected devices
-
-    Returns:
-
     """
     if usb_devices:
         usbid = UsbId()
@@ -74,15 +93,14 @@ def scan(usb_devices, imaging):
         for d in devices:
             ret = usbid.get_usbid_names("{0:0{1}x}".format(d.idVendor, 4), "{0:0{1}x}".format(d.idProduct, 4))
             if ret:
-                sn = usb.util.get_string(d, d.iSerialNumber)
+                sn = usb.util.get_string(d, d.iSerialNumber).replace('\x00', '')
 
                 devices_choice.append(' '.join(
                     [v for v in ret if v is not None] +
                     [sn if sn else '']
                 ))
 
-
-        val = questionary.select("devices found", choices=devices_choice).unsafe_ask()
+        val = questionary.select("devices found(vendor, product, serial number)", choices=devices_choice).unsafe_ask()
 
 
 

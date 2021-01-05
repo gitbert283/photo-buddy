@@ -7,6 +7,8 @@ verify_ssl = true
 
 [packages]
 pymtp = "*"
+gphoto2-cffi = "*"
+gphoto2 = "*"
 
 [requires]
 python_version = "3.8"

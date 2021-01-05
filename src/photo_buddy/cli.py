@@ -5,7 +5,9 @@ import usb.core
 import usb.util
 from photo_buddy.data.data_loader import UsbId
 from photo_buddy.backup import UsbDevices
-
+import photo_buddy.gphoto2_utils as gputils
+import pymtp
+import gphoto2cffi as gp
 
 
 def get_usb_devices_list(type='imaging'):
@@ -89,6 +91,28 @@ def add_backup_point(usb_device, imaging):
 
 @run.command()
 def mtp():
+    device = pymtp.MTP()
+    device.connect()
+    print(device)
+
+@run.command()
+@click.option('--list-devices', '-l', help="list connected PTP devices", is_flag=True)
+def ptp(list_devices):
+    pshowdevices = subprocess.Popen(
+        ['gphoto2', '--auto-detect'],
+        stderr=subprocess.DEVNULL
+    )
+    out, err = pshowdevices.communicate()
+    click.echo(out)
+    pass
+
+@run.command()
+@click.option('--list-devices', '-l', help="list connected PTP devices", is_flag=True)
+def gphoto(list_devices):
+    if list_devices:
+        cameras = gputils.get_camera_list()
+        click.echo('\n'.join([c[0] for c in cameras]))
+    pass
 
 
 if __name__ ==  '__main__':

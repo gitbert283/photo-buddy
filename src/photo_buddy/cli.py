@@ -4,9 +4,11 @@ import questionary
 import usb.core
 import usb.util
 from photo_buddy.data.data_loader import UsbId
+from photo_buddy.backup import UsbDevices
 
 
-def usb_devices(type='imaging'):
+
+def get_usb_devices_list(type='imaging'):
     usbid = UsbId()
     if type == 'imaging':
         devices_raw = usb.core.find(find_all=True, custom_match=find_class(6))
@@ -34,7 +36,7 @@ class QuestionaryOption(click.Option):
             raise Exception('ChoiceOption type arg must be click.Choice')
 
     def prompt_for_value(self, ctx):
-        val = questionary.select(self.prompt, choices=usb_devices()).unsafe_ask()
+        val = questionary.select(self.prompt, choices=get_usb_devices_list()).unsafe_ask()
         return val
 
 class find_class(object):
@@ -76,32 +78,17 @@ def backup(src, des, uid):
         click.echo(out)
 
 @run.command()
-@click.option('--usb-devices', '-u', help="scan usb devices", is_flag=True)
+@click.option('--usb-device', '-u', help="add usb device", is_flag=True)
 @click.option('--imaging', '-i', help="filter usb imaging devices", is_flag=True, default=True)
-# @click.argument('--device', '-d', prompt='Device', type=click.Choice([]), cls=QuestionaryOption)
 
-def scan(usb_devices, imaging):
+def add_backup_point(usb_device, imaging):
     """ scanning connected devices
     """
-    if usb_devices:
-        usbid = UsbId()
-        if imaging:
-            devices = usb.core.find(find_all=True, custom_match=find_class(6))
-        else:
-            devices = usb.core.find(find_all=True)
-        devices_choice = []
-        for d in devices:
-            ret = usbid.get_usbid_names("{0:0{1}x}".format(d.idVendor, 4), "{0:0{1}x}".format(d.idProduct, 4))
-            if ret:
-                sn = usb.util.get_string(d, d.iSerialNumber).replace('\x00', '')
+    if usb_device:
+        val = questionary.select("devices found(vendor, product, serial number)", choices=UsbDevices.get_usb_devices_list()).unsafe_ask()
 
-                devices_choice.append(' '.join(
-                    [v for v in ret if v is not None] +
-                    [sn if sn else '']
-                ))
-
-        val = questionary.select("devices found(vendor, product, serial number)", choices=devices_choice).unsafe_ask()
-
+@run.command()
+def mtp():
 
 
 if __name__ ==  '__main__':

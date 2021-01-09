@@ -1,3 +1,5 @@
+import time
+import re
 import click
 import subprocess
 import questionary
@@ -7,7 +9,7 @@ from photo_buddy.data.data_loader import UsbId
 from photo_buddy.backup import UsbDevices
 import photo_buddy.gphoto2_utils as gputils
 import pymtp
-import gphoto2cffi as gp
+from gi.repository import GLib, Gio
 
 
 def get_usb_devices_list(type='imaging'):
@@ -106,13 +108,72 @@ def ptp(list_devices):
     click.echo(out)
     pass
 
+def callback_unmount_gio(obj, result):
+    pass
+    click.echo('callback' + result)
+    return True
+
+def umount_gphoto2_usb_gio(usb_addr):
+
+    vm = Gio.VolumeMonitor.get()
+    mo = Gio.MountOperation()
+    mo.set_anonymous(True)
+
+    for vol in vm.get_volumes():
+        # import pdb;
+        # pdb.set_trace()
+        root = vol.get_activation_root()
+        m = re.match(rf'gphoto2://%5Busb%3A{usb_addr}%5D/', root.get_uri())
+        if m:
+            root.unmount_mountable_with_operation_finish(0, mo,  None, callback_unmount_gio)
+            time.sleep(3)
+            import pdb; pdb.set_trace()
+
+
+
 @run.command()
-@click.option('--list-devices', '-l', help="list connected PTP devices", is_flag=True)
-def gphoto(list_devices):
+@click.option('--list-devices', '-l',
+              help="list connected devices supporting gphoto2"
+                   "(hint:connect your device in PTP)",
+              is_flag=True)
+@click.option('--auto-detect', '-a',
+              help="auto detect camera connected with gphoto2"
+                   "(hint:connect your device in PTP)"
+                   " and apply further commands",
+              is_flag=True)
+@click.option('--list-files', '-f',
+              help="missing text",
+              is_flag=True)
+def gp2(list_devices, auto_detect, list_files):
+    """ gphoto 2
+
+    Args:
+        list_devices:
+        auto_detect:
+        list_files:
+
+    Returns:
+
+    """
+    vm = Gio.VolumeMonitor.get()
+    for v in vm.get_volumes():
+        name = v.get_name()
+        click.echo([name, v.get_uuid(), v.get_activation_root().get_uri()])
     if list_devices:
         cameras = gputils.get_camera_list()
         click.echo('\n'.join([c[0] for c in cameras]))
-    pass
+    elif auto_detect:
+        cameras = gputils.get_camera_list()
+        camera_str = questionary.select(
+            "devices found(name, addr)",
+            choices=[c[0] + ', ' + c[1] for c in cameras]).unsafe_ask()
+    camera_usbaddr = [c[1] for c in cameras if c[1] in camera_str][0]
+    umount_gphoto2_usb_gio(camera_usbaddr.split(':')[1])
+    camera = gputils.init_camera(*[c[1] for c in cameras if c[1] in camera_str])
+
+
+    click.echo(camera.get_summary())
+
 
 
 if __name__ ==  '__main__':

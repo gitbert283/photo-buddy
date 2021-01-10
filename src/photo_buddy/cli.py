@@ -10,6 +10,7 @@ from photo_buddy.backup import UsbDevices
 import photo_buddy.gphoto2_utils as gputils
 import pymtp
 from gi.repository import GLib, Gio
+from pathlib import Path
 
 
 def get_usb_devices_list(type='imaging'):
@@ -114,20 +115,23 @@ def callback_unmount_gio(obj, result):
     return True
 
 def umount_gphoto2_usb_gio(usb_addr):
+    """unmount if already mounted(path exists)
 
-    vm = Gio.VolumeMonitor.get()
-    mo = Gio.MountOperation()
-    mo.set_anonymous(True)
+    Args:
+        usb_addr:
 
-    for vol in vm.get_volumes():
-        # import pdb;
-        # pdb.set_trace()
-        root = vol.get_activation_root()
-        m = re.match(rf'gphoto2://%5Busb%3A{usb_addr}%5D/', root.get_uri())
-        if m:
-            root.unmount_mountable_with_operation_finish(0, mo,  None, callback_unmount_gio)
-            time.sleep(3)
-            import pdb; pdb.set_trace()
+    Returns:
+
+    """
+    addr1, addr2 = usb_addr.split(',')
+    # try to unmount
+    punmount = subprocess.Popen(
+        ['gio', 'mount', '-uf', f'gphoto2://%5Busb%3A{addr1}%2C{addr2}%5D'],
+        stderr=subprocess.DEVNULL
+    )
+    out, err = punmount.communicate()
+
+    click.echo(out)
 
 
 
@@ -155,10 +159,6 @@ def gp2(list_devices, auto_detect, list_files):
     Returns:
 
     """
-    vm = Gio.VolumeMonitor.get()
-    for v in vm.get_volumes():
-        name = v.get_name()
-        click.echo([name, v.get_uuid(), v.get_activation_root().get_uri()])
     if list_devices:
         cameras = gputils.get_camera_list()
         click.echo('\n'.join([c[0] for c in cameras]))
@@ -171,8 +171,10 @@ def gp2(list_devices, auto_detect, list_files):
     umount_gphoto2_usb_gio(camera_usbaddr.split(':')[1])
     camera = gputils.init_camera(*[c[1] for c in cameras if c[1] in camera_str])
 
+    if list_files:
+        click.echo(gputils.get_file_list(camera))
 
-    click.echo(camera.get_summary())
+    # click.echo(camera.get_summary())
 
 
 

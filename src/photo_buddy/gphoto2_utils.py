@@ -1,5 +1,8 @@
 import gphoto2 as gp
 import os
+from pathlib import Path
+
+from gphoto2 import camera
 
 
 def get_camera_list():
@@ -30,3 +33,17 @@ def get_file_list(camera, path='/'):
     for name in folders:
         result.extend(get_file_list(camera, os.path.join(path, name)))
     return result
+
+def download_all(camera, des:Path):
+    fpath = Path(get_file_list(camera)[0])
+    camera_file = camera.file_get(str(fpath.parent), str(fpath.name),  gp.GP_FILE_TYPE_NORMAL)
+    des_absolute_str = str(des.expanduser().joinpath(fpath.name).absolute())
+    print(f"Copying to:{fpath.name}" + des_absolute_str)
+    error=0
+    try:
+        error = gp.check_result(gp.gp_file_save(camera_file, des_absolute_str))
+    except gp.GPhoto2Error as ex:
+        print(ex)
+
+
+

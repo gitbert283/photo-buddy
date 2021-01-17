@@ -130,8 +130,8 @@ def umount_gphoto2_usb_gio(usb_addr):
         stderr=subprocess.DEVNULL
     )
     out, err = punmount.communicate()
-
-    click.echo(out)
+    if out:
+        click.echo(out)
 
 
 
@@ -148,7 +148,13 @@ def umount_gphoto2_usb_gio(usb_addr):
 @click.option('--list-files', '-f',
               help="missing text",
               is_flag=True)
-def gp2(list_devices, auto_detect, list_files):
+@click.option('--download-all', '-o',
+              help="download all files",
+              is_flag=True)
+@click.option('--des', '-d',
+              help="download destination",
+              type=Path)
+def gp2(list_devices, auto_detect, list_files,download_all, des):
     """ gphoto 2
 
     Args:
@@ -164,19 +170,32 @@ def gp2(list_devices, auto_detect, list_files):
         click.echo('\n'.join([c[0] for c in cameras]))
     elif auto_detect:
         cameras = gputils.get_camera_list()
-        camera_str = questionary.select(
-            "devices found(name, addr)",
-            choices=[c[0] + ', ' + c[1] for c in cameras]).unsafe_ask()
+        if len(cameras) > 1 :
+            camera_str = questionary.select(
+                "devices found(name, addr)",
+                choices=[c[0] + ', ' + c[1] for c in cameras]).unsafe_ask()
+        else:
+            camera_str = cameras[0][0] + ', ' + cameras[0][1]
+            click.echo(f'Select found camera, {camera_str}')
+
     camera_usbaddr = [c[1] for c in cameras if c[1] in camera_str][0]
+    #unmount
     umount_gphoto2_usb_gio(camera_usbaddr.split(':')[1])
+    #kill processes
+    # pkill -f gphoto2
+    click.echo(f'Init camera and load meta data')
     camera = gputils.init_camera(*[c[1] for c in cameras if c[1] in camera_str])
 
     if list_files:
         click.echo(gputils.get_file_list(camera))
 
-    # click.echo(camera.get_summary())
+    if download_all and not des or not download_all and des:
+        click.echo("Missing argument, either --des or --download-all")
 
+    if download_all and des:
+        gputils.download_all(camera, des)
 
+    camera.exit()
 
 if __name__ ==  '__main__':
     pass

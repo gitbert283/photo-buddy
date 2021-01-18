@@ -19,7 +19,6 @@ def init_camera(addr):
     camera.init()
     return camera
 
-
 def get_file_list(camera, path='/'):
     result = []
     # get files
@@ -35,6 +34,7 @@ def get_file_list(camera, path='/'):
     return result
 
 def download_all(camera, des:Path):
+
     fpath = Path(get_file_list(camera)[0])
     camera_file = camera.file_get(str(fpath.parent), str(fpath.name),  gp.GP_FILE_TYPE_NORMAL)
     des_absolute_str = str(des.expanduser().joinpath(fpath.name).absolute())

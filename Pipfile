@@ -14,6 +14,9 @@ pyusb = "==1.1.0"
 questionary = "==1.8.1"
 wcwidth = "==0.2.5"
 PyMTP = "==0.0.6"
+imagehash = "*"
+toml = "*"
+dynaconf = "*"
 
 [dev-packages]
 
